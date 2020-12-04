@@ -29,11 +29,19 @@ class Promise {
       return;
     }
     const ret = callback.onFulfilled(this.value);
-    console.log('##### ret #####', ret);
     callback.resolve(ret);
   }
 
   _resolve(value) {
+
+    if (value && (typeof value === 'object' || typeof value === 'function')) {
+      const then = value.then;
+      if (typeof then === 'function') {
+        then.call(value, this._resolve.bind(this));
+        return;
+      }
+    }
+
     this.status = 'fulfilled';
     this.value = value;
     this.callbacks.forEach(callback => this._handle(callback));
@@ -46,13 +54,27 @@ const mockAjax = (url, time, callback) => {
   }, 1000 * time);
 };
 
-new Promise(function (resolve) {
+const p = new Promise(function (resolve) {
   mockAjax('getUserId', 1, result => {
     resolve(result);
   });
-}).then(result => {
+});
+
+const pThen1 = p.then(result => {
   console.log('##### result1 #####', result);
   return '前缀' + result;
-}).then(result => {
+});
+
+p.then(result => {
   console.log('##### result2 #####', result);
+  return '前缀' + result;
+});
+
+const pThen2 = pThen1.then(result => {
+  console.log('##### result3 #####', result);
+  return result + '后缀';
+});
+
+pThen2.then(result => {
+  console.log('##### result4 #####', result);
 });
